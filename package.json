@@ -1,0 +1,54 @@
+{
+  "name": "skillscokac",
+  "version": "1.0.0",
+  "description": "CLI tool to install and manage Claude Code skills from skills.cokac.com",
+  "main": "bin/skillscokac.js",
+  "bin": {
+    "skillscokac": "./bin/skillscokac.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "echo 'Running pre-publish checks...' && node bin/skillscokac.js --help"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "claude-ai",
+    "skills",
+    "cli",
+    "install",
+    "ai",
+    "assistant",
+    "marketplace",
+    "skill-manager",
+    "cokac"
+  ],
+  "author": "코드깎는노인 <monogatree@gmail.com>",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kstost/skillscokac.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kstost/skillscokac/issues"
+  },
+  "homepage": "https://skills.cokac.com",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "axios": "^1.6.0",
+    "boxen": "^5.1.2",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "inquirer": "^8.2.6",
+    "ora": "^5.4.1",
+    "yaml": "^2.3.4"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ]
+}
