@@ -25,6 +25,9 @@ const AXIOS_TIMEOUT = 30000 // 30 seconds
 
 /**
  * Validate skill name for security
+ * @param {string} skillName - The skill name to validate
+ * @returns {string} The trimmed and validated skill name
+ * @throws {Error} If validation fails
  */
 function validateSkillName(skillName) {
   if (!skillName || typeof skillName !== 'string') {
@@ -55,6 +58,20 @@ function validateSkillName(skillName) {
   }
 
   return trimmed
+}
+
+/**
+ * Validate and handle skill name with consistent error reporting
+ * @param {string} skillName - The skill name to validate
+ * @returns {string} The validated skill name, or exits process on error
+ */
+function validateSkillNameOrExit(skillName) {
+  try {
+    return validateSkillName(skillName)
+  } catch (error) {
+    console.log(chalk.red(`✗ ${error.message}`))
+    process.exit(1)
+  }
 }
 
 /**
@@ -222,13 +239,16 @@ function displaySkillInfo(skill) {
 
 /**
  * Fetch skill from Marketplace and download ZIP
+ * @param {string} skillName - The skill name (must be pre-validated)
+ * @param {object} options - Options for fetching (silent mode, etc.)
+ * @returns {Promise<object>} The skill data
  */
 async function fetchSkill(skillName, options = {}) {
   const silent = options.silent || false
   const spinner = silent ? null : ora(`Searching for skill: ${skillName}`).start()
 
   try {
-    // Validate skill name
+    // Validate skill name (defensive check, should be validated by caller)
     skillName = validateSkillName(skillName)
 
     // Step 1: Get marketplace data to find postId
@@ -539,13 +559,8 @@ async function installSkill(skill, installType, options = {}) {
  * Install skill command handler
  */
 async function installSkillCommand(skillName) {
-  // Validate skill name (fetchSkill also validates, but do it early)
-  try {
-    skillName = validateSkillName(skillName)
-  } catch (error) {
-    console.log(chalk.red(`✗ ${error.message}`))
-    process.exit(1)
-  }
+  // Validate skill name early with consistent error handling
+  skillName = validateSkillNameOrExit(skillName)
 
   // Fetch skill
   const skill = await fetchSkill(skillName)
@@ -658,8 +673,10 @@ async function installCollectionCommand(collectionId) {
       const skillName = skillPost.skillName
 
       // Validate skill name before processing
-      if (!skillName || typeof skillName !== 'string' || skillName.length > 100) {
-        console.log(chalk.red('  ✗') + chalk.dim(' Invalid skill name in collection'))
+      try {
+        validateSkillName(skillName)
+      } catch (error) {
+        console.log(chalk.red('  ✗') + chalk.dim(` Invalid skill name: ${error.message}`))
         failCount++
         continue
       }
@@ -739,13 +756,8 @@ function getSkillsFromDirectory(skillsDir) {
  * Remove skill command handler
  */
 async function removeSkillCommand(skillName, force = false) {
-  // Validate skill name
-  try {
-    skillName = validateSkillName(skillName)
-  } catch (error) {
-    console.log(chalk.red(`✗ ${error.message}`))
-    process.exit(1)
-  }
+  // Validate skill name with consistent error handling
+  skillName = validateSkillNameOrExit(skillName)
 
   // Check if skill exists in personal and/or project directories
   const personalSkillDir = path.join(os.homedir(), '.claude', 'skills', skillName)
@@ -958,13 +970,8 @@ async function removeAllSkillsCommand(force = false) {
  * Download skill command handler
  */
 async function downloadSkillCommand(skillName, downloadPath) {
-  // Validate skill name (fetchSkill also validates, but do it early)
-  try {
-    skillName = validateSkillName(skillName)
-  } catch (error) {
-    console.log(chalk.red(`✗ ${error.message}`))
-    process.exit(1)
-  }
+  // Validate skill name early with consistent error handling
+  skillName = validateSkillNameOrExit(skillName)
 
   // Use current directory if no path specified
   if (!downloadPath) {

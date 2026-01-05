@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-01-06
+
+### Improved
+- Enhanced error handling with `validateSkillNameOrExit` helper function for consistent error reporting
+- Added comprehensive JSDoc comments for better code documentation
+- Improved code quality and readability through refactoring
+- Unified validation error messages across all command handlers
+
+### Removed
+- Removed internal `NPM_PUBLISH_GUIDE.md` documentation file
+
 ## [1.5.3] - 2026-01-05
 
 ### Changed
