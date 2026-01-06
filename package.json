@@ -1,6 +1,6 @@
 {
   "name": "skillscokac",
-  "version": "1.5.4",
+  "version": "1.5.6",
   "description": "CLI tool to install and manage Claude Code skills from skills.cokac.com",
   "main": "bin/skillscokac.js",
   "bin": {
