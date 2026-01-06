@@ -1178,18 +1178,7 @@ const options = program.opts()
         const [skillName, downloadPath] = options.download
         await downloadSkillCommand(skillName, downloadPath)
       } else if (options.test) {
-        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac/11/11', '/home/ubuntu/codejogak/skillscokac/11/', false));
-        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac', '/home/ubuntu/codejogak/skillscokac/ffe'));
-        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac', '/home/ubuntu/codejogak/skillscokac'));
-        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac/dfe', '/home/ubuntu/codejogak/skillscokac'));
-        console.log(validatePathWithinBase('/home/ubuntu/.claude', '/home/ubuntu/.claude'));
-        console.log(validatePathWithinBase('/home/ubuntu/.claude/dd', '/home/ubuntu/.claude'));
-        console.log(validatePathWithinBase('/home/ubuntu/.claude/dd', '/home/ubuntu/.claude/skills'));
-        console.log(validatePathWithinBase('/home/ubuntu/.claude/skills', '/home/ubuntu/.claude/skills/'));
-        console.log(validatePathWithinBase('/home/ubuntu/.claude/skills/f', '/home/ubuntu/.claude/skills'));
-        console.log(isWithInClaudeSkill('/home/ubuntu/.claude/skills/f'));
-        console.log(isWithInClaudeSkill('/home/ubuntu/1.claude/skills/f'));
-        console.log(isWithInClaudeSkill('/home/ubuntu/.claude/skills'));
+        //...
       } else if (options.upload) {
         await uploadSkillCommand(options.upload, options.apikey)
       } else if (options.uploadmodify) {
