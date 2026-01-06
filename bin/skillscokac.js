@@ -318,7 +318,7 @@ async function fetchSkill(skillName, options = {}) {
       throw new Error(`ZIP contains too many files (${zipEntries.length}). Maximum: ${MAX_FILES}`)
     }
     let totalSize = 0
-    const MAX_COMPRESSION_RATIO = 10
+    const MAX_COMPRESSION_RATIO = 1250
     const MAX_PATH_LENGTH = 255
     for (const entry of zipEntries) {
       const entryName = entry.entryName
