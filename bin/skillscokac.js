@@ -121,22 +121,34 @@ function preprocessFrontmatter(frontmatterText) {
   return processedLines.join('\n')
 }
 
+function isWithIn(checkPath, base) {
+  return checkPath.startsWith(base + path.sep) || checkPath === base;
+}
+
+function isWithInClaudeSkill(resolvedBase) {
+  const expectedPersonalPath = path.resolve(os.homedir(), '.claude', 'skills');// + path.sep;
+  const expectedProjectPath = path.resolve(process.cwd(), '.claude', 'skills');// + path.sep;
+  return isWithIn(resolvedBase, expectedPersonalPath) || isWithIn(resolvedBase, expectedProjectPath);
+}
+
 function validatePathWithinBase(targetPath, baseDir, enforceClaudeSkills = true) {
   try {
     const resolvedTarget = path.resolve(targetPath)
     const resolvedBase = path.resolve(baseDir)
-    const isWithinBase = resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase
-    if (!isWithinBase || (enforceClaudeSkills && !resolvedTarget.includes(path.join('.claude', 'skills')))) {
-      debugLog('PATH_REJECTED', targetPath, { resolvedTarget, resolvedBase, enforceClaudeSkills })
-      return false
-    }
-    return true
+    const isWithinBase = isWithIn(resolvedTarget, resolvedBase);
+    if (!isWithinBase) return false;
+    if (!enforceClaudeSkills) return true;
+    if (!isWithInClaudeSkill(resolvedBase)) return false;
+    return true;
   } catch (error) {
     return false
   }
 }
 
 function safeWriteFile(filePath, content, baseDir, enforceClaudeSkills = true) {
+  if (enforceClaudeSkills && !isWithInClaudeSkill(filePath)) {
+    throw new Error(`Security: Rejected unsafe file path: ${filePath}`)
+  }
   if (!validatePathWithinBase(filePath, baseDir, enforceClaudeSkills)) {
     debugLog('WRITE_REJECTED', filePath, { reason: 'Path validation failed', baseDir })
     throw new Error(`Security: Rejected unsafe file path: ${filePath}`)
@@ -167,31 +179,34 @@ function safeRemoveDirectory(dirPath, skillNameOrBaseDir, isSkillDirectory = tru
   if (isSkillDirectory) {
     const skillName = skillNameOrBaseDir
     validateSkillName(skillName)
-    if (!dirPath.endsWith(skillName)) {
-      debugLog('DELETE_REJECTED', dirPath, { reason: 'Path does not end with skill name', skillName })
+    if (!isWithInClaudeSkill(resolvedPath)) {
+      throw new Error(`Security: Rejected unsafe file path: ${resolvedPath}`)
+    }
+    if (!resolvedPath.endsWith(skillName)) {
+      debugLog('DELETE_REJECTED', resolvedPath, { reason: 'Path does not end with skill name', skillName })
       throw new Error(`Security: Directory path must end with skill name: ${skillName}`)
     }
-    if (!dirPath.includes(path.join('.claude', 'skills', skillName))) {
-      debugLog('DELETE_REJECTED', dirPath, { reason: 'Path not in .claude/skills', skillName })
+    if (!resolvedPath.includes(path.join('.claude', 'skills', skillName))) {
+      debugLog('DELETE_REJECTED', resolvedPath, { reason: 'Path not in .claude/skills', skillName })
       throw new Error(`Security: Directory must be within .claude/skills/${skillName}`)
     }
     const expectedPersonalPath = path.resolve(os.homedir(), '.claude', 'skills', skillName)
     const expectedProjectPath = path.resolve(process.cwd(), '.claude', 'skills', skillName)
     if (resolvedPath !== expectedPersonalPath && resolvedPath !== expectedProjectPath) {
-      debugLog('DELETE_REJECTED', dirPath, { reason: 'Unexpected path', resolvedPath, expectedPersonalPath, expectedProjectPath })
+      debugLog('DELETE_REJECTED', resolvedPath, { reason: 'Unexpected path', resolvedPath, expectedPersonalPath, expectedProjectPath })
       throw new Error(`Security: Unexpected directory path: ${resolvedPath}`)
     }
   } else {
     const baseDir = skillNameOrBaseDir
-    if (!validatePathWithinBase(dirPath, baseDir, false)) {
-      debugLog('DELETE_REJECTED', dirPath, { reason: 'Path validation failed', baseDir })
-      throw new Error(`Security: Rejected unsafe directory path: ${dirPath}`)
+    if (!validatePathWithinBase(resolvedPath, baseDir, false)) {
+      debugLog('DELETE_REJECTED', resolvedPath, { reason: 'Path validation failed', baseDir })
+      throw new Error(`Security: Rejected unsafe directory path: ${resolvedPath}`)
     }
   }
   if (fs.existsSync(resolvedPath)) {
     const stats = fs.lstatSync(resolvedPath)
     if (stats.isSymbolicLink()) {
-      debugLog('DELETE_REJECTED', dirPath, { reason: 'Symlink', resolvedPath })
+      debugLog('DELETE_REJECTED', resolvedPath, { reason: 'Symlink', resolvedPath })
       throw new Error(`Security: Cannot remove symlink: ${resolvedPath}`)
     }
   }
@@ -209,7 +224,7 @@ function safeRemoveDirectory(dirPath, skillNameOrBaseDir, isSkillDirectory = tru
         }
       }
       countFiles(resolvedPath)
-    } catch (e) {}
+    } catch (e) { }
     debugLog('FS_RM', resolvedPath, { recursive: true, fileCount })
     fs.rmSync(resolvedPath, { recursive: true })
     debugLog('DELETE', resolvedPath, {
@@ -1141,46 +1156,60 @@ program
   .option('-f, --remove-skill-force <skillName>', 'Remove skill from all locations without confirmation')
   .option('-a, --remove-all-skills', 'Remove all installed skills')
   .option('-A, --remove-all-skills-force', 'Remove all installed skills without confirmation')
+  .option('-t, --test', 'Test code')
   .option('-l, --list-installed-skills', 'List all installed skills')
   .parse(process.argv)
 
 const options = program.opts()
 
-;(async () => {
-  try {
-    if (options.installSkill) {
-      await installSkillCommand(options.installSkill)
-    } else if (options.installCollection) {
-      await installCollectionCommand(options.installCollection)
-    } else if (options.download) {
-      if (options.download.length < 1 || options.download.length > 2) {
-        console.log(chalk.red('✗ Invalid arguments for --download'))
-        console.log(chalk.dim('Usage: npx skillscokac --download <skillName> [path]'))
-        console.log()
-        process.exit(1)
+  ; (async () => {
+    try {
+      if (options.installSkill) {
+        await installSkillCommand(options.installSkill)
+      } else if (options.installCollection) {
+        await installCollectionCommand(options.installCollection)
+      } else if (options.download) {
+        if (options.download.length < 1 || options.download.length > 2) {
+          console.log(chalk.red('✗ Invalid arguments for --download'))
+          console.log(chalk.dim('Usage: npx skillscokac --download <skillName> [path]'))
+          console.log()
+          process.exit(1)
+        }
+        const [skillName, downloadPath] = options.download
+        await downloadSkillCommand(skillName, downloadPath)
+      } else if (options.test) {
+        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac/11/11', '/home/ubuntu/codejogak/skillscokac/11/', false));
+        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac', '/home/ubuntu/codejogak/skillscokac/ffe'));
+        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac', '/home/ubuntu/codejogak/skillscokac'));
+        console.log(validatePathWithinBase('/home/ubuntu/codejogak/skillscokac/dfe', '/home/ubuntu/codejogak/skillscokac'));
+        console.log(validatePathWithinBase('/home/ubuntu/.claude', '/home/ubuntu/.claude'));
+        console.log(validatePathWithinBase('/home/ubuntu/.claude/dd', '/home/ubuntu/.claude'));
+        console.log(validatePathWithinBase('/home/ubuntu/.claude/dd', '/home/ubuntu/.claude/skills'));
+        console.log(validatePathWithinBase('/home/ubuntu/.claude/skills', '/home/ubuntu/.claude/skills/'));
+        console.log(validatePathWithinBase('/home/ubuntu/.claude/skills/f', '/home/ubuntu/.claude/skills'));
+        console.log(isWithInClaudeSkill('/home/ubuntu/.claude/skills/f'));
+        console.log(isWithInClaudeSkill('/home/ubuntu/1.claude/skills/f'));
+        console.log(isWithInClaudeSkill('/home/ubuntu/.claude/skills'));
+      } else if (options.upload) {
+        await uploadSkillCommand(options.upload, options.apikey)
+      } else if (options.uploadmodify) {
+        await uploadModifySkillCommand(options.uploadmodify, options.apikey)
+      } else if (options.removeAllSkillsForce) {
+        await removeAllSkillsCommand(true)
+      } else if (options.removeAllSkills) {
+        await removeAllSkillsCommand()
+      } else if (options.removeSkillForce) {
+        await removeSkillCommand(options.removeSkillForce, true)
+      } else if (options.removeSkill) {
+        await removeSkillCommand(options.removeSkill)
+      } else if (options.listInstalledSkills) {
+        await listInstalledSkillsCommand()
+      } else {
+        program.help()
       }
-      const [skillName, downloadPath] = options.download
-      await downloadSkillCommand(skillName, downloadPath)
-    } else if (options.upload) {
-      await uploadSkillCommand(options.upload, options.apikey)
-    } else if (options.uploadmodify) {
-      await uploadModifySkillCommand(options.uploadmodify, options.apikey)
-    } else if (options.removeAllSkillsForce) {
-      await removeAllSkillsCommand(true)
-    } else if (options.removeAllSkills) {
-      await removeAllSkillsCommand()
-    } else if (options.removeSkillForce) {
-      await removeSkillCommand(options.removeSkillForce, true)
-    } else if (options.removeSkill) {
-      await removeSkillCommand(options.removeSkill)
-    } else if (options.listInstalledSkills) {
-      await listInstalledSkillsCommand()
-    } else {
-      program.help()
+    } catch (error) {
+      console.error(chalk.red('\n✗ Unexpected error:'), error.message)
+      if (process.env.DEBUG) console.error(error.stack)
+      process.exit(1)
     }
-  } catch (error) {
-    console.error(chalk.red('\n✗ Unexpected error:'), error.message)
-    if (process.env.DEBUG) console.error(error.stack)
-    process.exit(1)
-  }
-})()
+  })()
